@@ -1,6 +1,21 @@
 # newelog-auth-service
 
-Autenticação e gestão de usuários do Newelog Frota. Emite JWT (HS256) para o front e para os demais serviços.
+> Projeto Integrador 3º Semestre · DSM · FATEC São José dos Campos · Equipe **Koitech-Log** · Cliente **NEWE Logística Integrada**
+>
+> [Repositório principal](https://github.com/Koitech-Log/Koitech-Log-3DSM-Newelog) · [Documentação do projeto](https://github.com/Koitech-Log/Documentos) · [motoristas-service](https://github.com/Koitech-Log/newelog-motoristas-service) · [manifesto-service](https://github.com/Koitech-Log/newelog-manifesto-service) · [frontend](https://github.com/Koitech-Log/newelog-frota-web)
+
+Autenticação e gestão de usuários do NEWELOG. Emite o JWT (HS256) usado pelo front-end e validado pelos demais serviços.
+
+## O que este serviço entrega
+
+| Sprint | Funcionalidade | Situação |
+|---|---|---|
+| 2 | Login com e-mail e senha (US04) | ✅ `POST /api/auth/login` |
+| 2 | Controle de acesso por perfil Gestor / Operador (US05) | ✅ perfil no token, validado por todos os serviços |
+| 3 | Cadastro de usuário pelo gestor com nome, e-mail, perfil e senha inicial (US10.1 / US10.2) | 🟨 rota `POST /api/usuarios` pronta; troca obrigatória da senha no primeiro acesso e tela no front ainda pendentes |
+| 3 | Listar e buscar usuários (US11.1) | 🟨 `GET /api/usuarios` lista; busca/filtro ainda pendente |
+| 3 | Alterar perfil de um usuário (US11.2) | ❌ não iniciado |
+| 3 | Histórico das alterações de perfil (US11.3) | ❌ não iniciado |
 
 **Stack:** Java 21, Spring Boot 3.5.16, Spring Security, JPA, Flyway, PostgreSQL 16, jjwt 0.12.
 
@@ -106,7 +121,7 @@ Após 5 senhas erradas seguidas a conta fica bloqueada por 15 minutos.
 
 O token é um JWT HS256 com `iss = newelog-auth-service`, `sub = id do usuário` e as claims `email`, `nome` e `perfil` (`GESTOR` | `OPERADOR`, em maiúsculas no token). Os outros serviços validam com o mesmo `JWT_SECRET`, sem chamar este serviço.
 
-O `motoristas-service` e o `manifesto-service` **ainda não exigem token**: para protegê-los, é preciso adicionar `spring-boot-starter-security` e um filtro equivalente ao `JwtAuthFilter` deste projeto.
+O `motoristas-service` e o `manifesto-service` já exigem o token em todas as rotas (exceto `/actuator/health` e `/actuator/info`), validando assinatura, `iss` e `perfil` com o mesmo `JWT_SECRET`.
 
 ## Estrutura do projeto
 
