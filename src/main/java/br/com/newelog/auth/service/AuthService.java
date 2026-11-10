@@ -73,7 +73,7 @@ public class AuthService {
 
         JwtService.Token token = jwtService.gerar(usuario, agora);
         UsuarioDTO dto = UsuarioDTO.de(usuario);
-        return new LoginResponseDTO(token.valor(), "Bearer", token.expiraEm(), dto.nome(), dto.perfil());
+        return new LoginResponseDTO(token.valor(), "Bearer", token.expiraEm(), dto.nome(), dto.perfil(), dto.mustChangePassword());
     }
 
     @Transactional(readOnly = true)
@@ -88,10 +88,14 @@ public class AuthService {
             throw new AuthException(HttpStatus.BAD_REQUEST, "Senha atual incorreta.");
         }
         if (senhaAtual.equals(novaSenha)) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "A nova senha deve ser diferente da atual.");
+            String msg = usuario.isMustChangePassword()
+                    ? "A nova senha deve ser diferente da senha inicial."
+                    : "A nova senha deve ser diferente da atual.";
+            throw new AuthException(HttpStatus.BAD_REQUEST, msg);
         }
         usuario.setSenhaHash(encoder.encode(novaSenha));
-    }
+        usuario.setMustChangePassword(false);
+    }   
 
     private Usuario usuarioAtivo(Long id) {
         return repository.findById(id)

@@ -49,6 +49,9 @@ public class Usuario {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm;
 
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = false;
+
     @PrePersist
     void aoCriar() {
         if (criadoEm == null) {
@@ -79,4 +82,6 @@ public class Usuario {
     public Instant getUltimoLoginEm() { return ultimoLoginEm; }
     public void setUltimoLoginEm(Instant ultimoLoginEm) { this.ultimoLoginEm = ultimoLoginEm; }
     public Instant getCriadoEm() { return criadoEm; }
+    public boolean isMustChangePassword() { return mustChangePassword; }
+    public void setMustChangePassword(boolean mustChangePassword) {this.mustChangePassword = mustChangePassword;}
 }
