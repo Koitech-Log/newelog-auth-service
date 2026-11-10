@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasItem;
 
 import java.util.Map;
 
@@ -159,6 +161,70 @@ class AuthControllerTest {
         mockMvc.perform(postJson("/api/auth/login", Map.of("email", OPERADOR, "senha", "nova-senha-123")))
                 .andExpect(status().isOk());
     }
+
+    @Test
+void validaBuscaFiltrosEPermissaoNaListagemDeUsuarios() throws Exception {
+    String emailAna = "ana.koi176@example.com";
+    String emailBruno = "bruno.koi176@example.com";
+
+    Usuario ana = criar(emailAna, Perfil.OPERADOR);
+    ana.setNome("Ana Pioneira");
+    repository.save(ana);
+
+    Usuario bruno = criar(emailBruno, Perfil.GESTOR);
+    bruno.setNome("Bruno Pioneira");
+    repository.save(bruno);
+
+    String tokenGestor = bearer(GESTOR);
+
+    // Busca por parte do nome, com espaços e letras maiúsculas.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", tokenGestor)
+                    .param("busca", "  PIONEIRA  "))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()", is(2)))
+            .andExpect(jsonPath("$[*].email", hasItem(emailAna)))
+            .andExpect(jsonPath("$[*].email", hasItem(emailBruno)));
+
+    // Busca por um trecho que aparece apenas no e-mail.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", tokenGestor)
+                    .param("busca", "ana.koi176@"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()", is(1)))
+            .andExpect(jsonPath("$[0].email", is(emailAna)));
+
+    // Filtro de perfil sem texto de busca.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", tokenGestor)
+                    .param("perfil", "operador"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[*].email", hasItem(emailAna)))
+            .andExpect(jsonPath("$[*].perfil", everyItem(is("operador"))));
+
+    // Os dois nomes correspondem à busca, mas só Ana é operadora.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", tokenGestor)
+                    .param("busca", "pioneira")
+                    .param("perfil", "operador"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()", is(1)))
+            .andExpect(jsonPath("$[0].email", is(emailAna)));
+
+    // Busca sem correspondência retorna uma lista vazia.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", tokenGestor)
+                    .param("busca", "sem-correspondencia-koi176"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.length()", is(0)));
+
+    // Um operador autenticado recebe 403 mesmo enviando os filtros.
+    mockMvc.perform(get("/api/usuarios")
+                    .header("Authorization", bearer(OPERADOR))
+                    .param("busca", "pioneira")
+                    .param("perfil", "operador"))
+            .andExpect(status().isForbidden());
+}
 
     // ---------- helpers ----------
 
