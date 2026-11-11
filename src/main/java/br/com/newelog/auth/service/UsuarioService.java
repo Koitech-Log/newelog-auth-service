@@ -56,7 +56,6 @@ public class UsuarioService {
         usuario.setEmail(email);
         usuario.setSenhaHash(encoder.encode(dto.senha()));
         usuario.setPerfil(dto.perfil());
-        usuario.setPerfil(dto.perfil());
         usuario.setMustChangePassword(true);
         return UsuarioDTO.de(repository.save(usuario));
     }
