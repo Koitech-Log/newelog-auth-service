@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,8 +33,11 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public List<UsuarioDTO> listar() {
-        return usuarioService.listar();
+    public List<UsuarioDTO> listar(
+            @RequestParam(name = "busca", defaultValue = "") String busca,
+            @RequestParam(name = "perfil", defaultValue = "") String perfil
+    ) {
+        return usuarioService.listar(busca, perfil);
     }
 
     @PostMapping

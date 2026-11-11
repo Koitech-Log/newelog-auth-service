@@ -1,8 +1,8 @@
 package br.com.newelog.auth.service;
 
 import java.util.List;
+import java.util.Locale;
 
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import br.com.newelog.auth.dto.CriarUsuarioRequestDTO;
 import br.com.newelog.auth.dto.UsuarioDTO;
+import br.com.newelog.auth.model.Perfil;
 import br.com.newelog.auth.model.Usuario;
 import br.com.newelog.auth.repository.UsuarioRepository;
 
@@ -25,8 +26,23 @@ public class UsuarioService {
     }
 
     @Transactional(readOnly = true)
-    public List<UsuarioDTO> listar() {
-        return repository.findAll(Sort.by("nome")).stream().map(UsuarioDTO::de).toList();
+    public List<UsuarioDTO> listar(String busca, String perfil) {
+        String termo = busca.trim().toLowerCase(Locale.ROOT);
+        String filtro = perfil.trim();
+        Perfil perfilSelecionado = null;
+
+        if (!filtro.isEmpty()) {
+            try {
+                perfilSelecionado = Perfil.valueOf(filtro.toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new AuthException(HttpStatus.BAD_REQUEST, "Perfil inválido.");
+            }
+        }
+
+        return repository.buscar(termo, perfilSelecionado, perfilSelecionado != null)
+                .stream()
+                .map(UsuarioDTO::de)
+                .toList();
     }
 
     @Transactional
