@@ -135,9 +135,23 @@ class AuthControllerTest {
 
         mockMvc.perform(postJson("/api/usuarios", novo).header("Authorization", bearer(GESTOR)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.perfil", is("operador")));
+                .andExpect(jsonPath("$.perfil", is("operador")))
+                .andExpect(jsonPath("$.ativo", is(true)))
+                .andExpect(jsonPath("$.mustChangePassword", is(true)))
+                .andExpect(jsonPath("$.criadoEm", notNullValue()));
         mockMvc.perform(postJson("/api/usuarios", novo).header("Authorization", bearer(GESTOR)))
                 .andExpect(status().isConflict());
+    }
+
+    @Test
+    void operadorNaoPodeCadastrarUsuario() throws Exception {
+        Map<String, String> novo = Map.of("nome", "Carlos", "email", "carlos@newelog.com",
+                "senha", "outra-senha-1", "perfil", "operador");
+
+        mockMvc.perform(postJson("/api/usuarios", novo).header("Authorization", bearer(OPERADOR)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(postJson("/api/usuarios", novo))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
