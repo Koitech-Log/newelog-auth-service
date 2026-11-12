@@ -20,6 +20,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import br.com.newelog.auth.repository.UsuarioRepository;
 import br.com.newelog.auth.security.JwtAuthFilter;
 import br.com.newelog.auth.security.JwtService;
 import br.com.newelog.auth.security.RespostaErroSeguranca;
@@ -29,7 +30,8 @@ import br.com.newelog.auth.security.RespostaErroSeguranca;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService, ObjectMapper mapper) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtService jwtService, ObjectMapper mapper,
+            UsuarioRepository usuarioRepository) throws Exception {
         RespostaErroSeguranca erros = new RespostaErroSeguranca(mapper);
 
         http
@@ -43,7 +45,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/usuarios/**").hasRole("GESTOR")
                         .anyRequest().authenticated())
                 .exceptionHandling(e -> e.authenticationEntryPoint(erros).accessDeniedHandler(erros))
-                .addFilterBefore(new JwtAuthFilter(jwtService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthFilter(jwtService, usuarioRepository),
+                        UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

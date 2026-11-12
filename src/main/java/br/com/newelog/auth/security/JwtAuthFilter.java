@@ -9,7 +9,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import br.com.newelog.auth.model.Perfil;
+import br.com.newelog.auth.repository.UsuarioRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -21,9 +21,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private static final String PREFIXO = "Bearer ";
 
     private final JwtService jwtService;
+    private final UsuarioRepository usuarioRepository;
 
-    public JwtAuthFilter(JwtService jwtService) {
+    public JwtAuthFilter(JwtService jwtService, UsuarioRepository usuarioRepository) {
         this.jwtService = jwtService;
+        this.usuarioRepository = usuarioRepository;
     }
 
     @Override
@@ -38,14 +40,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private void autenticar(Claims claims) {
         try {
-            Perfil perfil = Perfil.valueOf(claims.get("perfil", String.class));
-            UsuarioAutenticado principal = new UsuarioAutenticado(
-                    Long.valueOf(claims.getSubject()),
-                    claims.get("email", String.class),
-                    claims.get("nome", String.class),
-                    perfil);
-            SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(
-                    principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + perfil.name()))));
+            Long id = Long.valueOf(claims.getSubject());
+            // perfil vem do BANCO, não do token: a mudança vale na próxima requisição
+            usuarioRepository.findById(id).ifPresent(u -> {
+                UsuarioAutenticado principal =
+                        new UsuarioAutenticado(u.getId(), u.getEmail(), u.getNome(), u.getPerfil());
+                SecurityContextHolder.getContext().setAuthentication(
+                        new UsernamePasswordAuthenticationToken(principal, null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + u.getPerfil().name()))));
+            });
         } catch (IllegalArgumentException | NullPointerException e) {
             // claims malformadas: segue sem autenticação e o entry point responde 401
         }

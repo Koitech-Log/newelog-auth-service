@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.newelog.auth.dto.AtualizarAtivoRequestDTO;
+import br.com.newelog.auth.dto.AtualizarPerfilRequestDTO;
 import br.com.newelog.auth.dto.CriarUsuarioRequestDTO;
 import br.com.newelog.auth.dto.UsuarioDTO;
 import br.com.newelog.auth.security.UsuarioAutenticado;
@@ -53,5 +54,14 @@ public class UsuarioController {
             @AuthenticationPrincipal UsuarioAutenticado principal
     ) {
         return usuarioService.atualizarAtivo(id, dto.ativo(), principal.id());
+    }
+
+    @PatchMapping("/{id}/perfil")
+    public UsuarioDTO atualizarPerfil(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPerfilRequestDTO dto,
+            @AuthenticationPrincipal UsuarioAutenticado principal
+    ) {
+        return usuarioService.atualizarPerfil(id, dto.perfil(), principal.id());
     }
 }

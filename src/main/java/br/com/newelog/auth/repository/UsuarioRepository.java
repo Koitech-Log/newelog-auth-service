@@ -1,14 +1,13 @@
 package br.com.newelog.auth.repository;
 import java.util.List;
-
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import br.com.newelog.auth.model.Usuario;
 import br.com.newelog.auth.model.Perfil;
+import br.com.newelog.auth.model.Usuario;
 
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
@@ -31,4 +30,6 @@ List<Usuario> buscar(
         @Param("perfil") Perfil perfil,
         @Param("filtrarPerfil") boolean filtrarPerfil
 );
+
+long countByPerfilAndAtivo(Perfil perfil, boolean ativo);
 }
