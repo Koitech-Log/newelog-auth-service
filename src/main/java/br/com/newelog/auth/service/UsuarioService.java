@@ -70,4 +70,25 @@ public class UsuarioService {
         usuario.setAtivo(ativo);
         return UsuarioDTO.de(usuario);
     }
+
+    @Transactional
+    public UsuarioDTO atualizarPerfil(Long id, Perfil novoPerfil, Long solicitanteId) {
+        if (id.equals(solicitanteId)) {
+            throw new AuthException(HttpStatus.BAD_REQUEST,
+                "Você não pode alterar o próprio perfil.");
+        }
+        Usuario usuario = repository.findById(id)
+                .orElseThrow(() -> new AuthException(HttpStatus.NOT_FOUND, "Usuário não encontrado."));
+
+        boolean rebaixandoGestorAtivo = usuario.getPerfil() == Perfil.GESTOR
+                && novoPerfil == Perfil.OPERADOR
+                && usuario.isAtivo();
+
+        if (rebaixandoGestorAtivo && repository.countByPerfilAndAtivo(Perfil.GESTOR, true) <= 1) {
+            throw new AuthException(HttpStatus.CONFLICT,
+                "Não é possível remover o último gestor do sistema.");
+        }
+        usuario.setPerfil(novoPerfil);
+        return UsuarioDTO.de(usuario);
+    }
 }
