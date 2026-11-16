@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -42,6 +43,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleIntegridade(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(corpoDeErro("Já existe um usuário com este e-mail."));
+    }
+
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleFalhaDeBanco(DataAccessException ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(corpoDeErro("Não foi possível concluir a operação. Tente novamente."));
     }
 
     private Map<String, Object> corpoDeErro(String mensagem) {

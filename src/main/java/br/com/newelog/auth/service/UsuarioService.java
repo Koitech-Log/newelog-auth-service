@@ -1,5 +1,6 @@
 package br.com.newelog.auth.service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 
@@ -9,9 +10,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import br.com.newelog.auth.dto.CriarUsuarioRequestDTO;
+import br.com.newelog.auth.dto.HistoricoPerfilDTO;
 import br.com.newelog.auth.dto.UsuarioDTO;
+import br.com.newelog.auth.model.HistoricoPerfil;
 import br.com.newelog.auth.model.Perfil;
 import br.com.newelog.auth.model.Usuario;
+import br.com.newelog.auth.repository.HistoricoPerfilRepository;
 import br.com.newelog.auth.repository.UsuarioRepository;
 
 @Service
@@ -19,10 +23,22 @@ public class UsuarioService {
 
     private final UsuarioRepository repository;
     private final PasswordEncoder encoder;
+    private final HistoricoPerfilRepository historicoRepository;
 
-    public UsuarioService(UsuarioRepository repository, PasswordEncoder encoder) {
+    public UsuarioService(UsuarioRepository repository, PasswordEncoder encoder,
+            HistoricoPerfilRepository historicoRepository) {
         this.repository = repository;
         this.encoder = encoder;
+        this.historicoRepository = historicoRepository;
+    }
+
+    @Transactional(readOnly = true)
+    public List<HistoricoPerfilDTO> listarHistoricoPerfil(Long id) {
+        if (!repository.existsById(id)) {
+            throw new AuthException(HttpStatus.NOT_FOUND, "Usuário não encontrado.");
+        }
+        return historicoRepository.findByUsuarioIdOrderByAlteradoEmDescIdDesc(id)
+                .stream().map(HistoricoPerfilDTO::de).toList();
     }
 
     @Transactional(readOnly = true)
@@ -77,8 +93,13 @@ public class UsuarioService {
             throw new AuthException(HttpStatus.BAD_REQUEST,
                 "Você não pode alterar o próprio perfil.");
         }
-        Usuario usuario = repository.findById(id)
+        Usuario usuario = repository.findByIdParaAtualizar(id)
                 .orElseThrow(() -> new AuthException(HttpStatus.NOT_FOUND, "Usuário não encontrado."));
+
+        Perfil perfilAnterior = usuario.getPerfil();
+        if (perfilAnterior == novoPerfil) {
+            return UsuarioDTO.de(usuario);
+        }
 
         boolean rebaixandoGestorAtivo = usuario.getPerfil() == Perfil.GESTOR
                 && novoPerfil == Perfil.OPERADOR
@@ -88,7 +109,10 @@ public class UsuarioService {
             throw new AuthException(HttpStatus.CONFLICT,
                 "Não é possível remover o último gestor do sistema.");
         }
+        Usuario autor = repository.findById(solicitanteId)
+                .orElseThrow(() -> new AuthException(HttpStatus.NOT_FOUND, "Autor da alteração não encontrado."));
         usuario.setPerfil(novoPerfil);
+        historicoRepository.save(new HistoricoPerfil(id, autor, perfilAnterior, novoPerfil, Instant.now()));
         return UsuarioDTO.de(usuario);
     }
 }
