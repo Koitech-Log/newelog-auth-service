@@ -15,7 +15,7 @@ Autenticação e gestão de usuários do NEWELOG. Emite o JWT (HS256) usado pelo
 | 3 | Cadastro de usuário pelo gestor com nome, e-mail, perfil e senha inicial (US10.1 / US10.2) | 🟨 rota `POST /api/usuarios` pronta; troca obrigatória da senha no primeiro acesso e tela no front ainda pendentes |
 | 3 | Listar e buscar usuários (US11.1) | 🟨 `GET /api/usuarios` lista; busca/filtro ainda pendente |
 | 3 | Alterar perfil de um usuário (US11.2) | ❌ não iniciado |
-| 3 | Histórico das alterações de perfil (US11.3) | ❌ não iniciado |
+| 3 | Histórico das alterações de perfil (US16) | ✅ registro transacional e consulta restrita ao gestor |
 
 **Stack:** Java 21, Spring Boot 3.5.16, Spring Security, JPA, Flyway, PostgreSQL 16, jjwt 0.12.
 
@@ -56,6 +56,11 @@ Rodam com H2 em memória (modo PostgreSQL), sem precisar de banco:
 
 O mesmo comando roda no CI (GitHub Actions) a cada push ou pull request na `main`.
 
+Para executar a mesma suíte em um PostgreSQL de teste, defina `TEST_DB_URL`,
+`TEST_DB_DRIVER=org.postgresql.Driver`, `TEST_DB_USERNAME` e `TEST_DB_PASSWORD`
+antes de executar o comando. Use uma base isolada para os testes; o Flyway
+aplica as migrations nessa base. Sem essas variáveis, os testes continuam usando H2.
+
 ## Variáveis de ambiente
 
 | Variável | Obrigatória | Padrão | Uso |
@@ -84,9 +89,48 @@ Erros seguem o padrão dos outros serviços: `{ "timestamp": "...", "mensagem": 
 | GET | `/api/usuarios` | gestor | Lista usuários, ordenados por nome |
 | POST | `/api/usuarios` | gestor | `{ nome, email, senha, perfil }` → 201 |
 | PATCH | `/api/usuarios/{id}/ativo` | gestor | `{ ativo }` |
+| PATCH | `/api/usuarios/{id}/perfil` | gestor | `{ perfil }` → usuário atualizado; registra o histórico na mesma transação |
+| GET | `/api/usuarios/{id}/historico-perfil` | gestor | Histórico do usuário, do mais recente ao mais antigo |
 | GET | `/actuator/health`, `/actuator/info` | público | Saúde e informações do serviço |
 
 As rotas autenticadas exigem o header `Authorization: Bearer <token>`.
+
+### Histórico de perfil (US16 — KOI-180, KOI-181 e KOI-183)
+
+Cada mudança entre `gestor` e `operador` registra o usuário alterado, o ID e o
+nome de quem alterou, a data/hora em UTC e os perfis anterior e novo. O nome do
+autor é preservado como era na alteração. O autor vem da autenticação e a hora
+vem do servidor; o cliente não envia esses dados.
+
+`GET /api/usuarios/{id}/historico-perfil` retorna `200` com uma lista como:
+
+```json
+[
+  {
+    "id": 12,
+    "usuarioId": 7,
+    "alteradoPorId": 1,
+    "alteradoPorNome": "Administrador",
+    "alteradoEm": "2026-11-12T15:30:00Z",
+    "perfilAnterior": "operador",
+    "perfilNovo": "gestor"
+  }
+]
+```
+
+- A ordenação usa `alteradoEm` decrescente, com desempate por `id` decrescente.
+- Usuário existente sem mudanças retorna `[]`; usuário inexistente retorna `404`.
+- Sem token válido retorna `401`; operador autenticado recebe `403`.
+- A permissão é lida do banco: gestor rebaixado perde a consulta na próxima requisição.
+- Não há endpoints para editar ou excluir o histórico.
+- Cadastro e solicitação do perfil já atual não geram registros.
+- Alterações recusadas, inclusive autoalteração e remoção do último gestor, não geram registros.
+- Perfil e histórico são gravados na mesma transação: se uma gravação falhar, ambas são desfeitas.
+- Falhas de acesso ao banco retornam erro de servidor (`500`) no formato padrão, sem tratar a sessão como expirada.
+- Mudanças simultâneas do mesmo usuário usam bloqueio de escrita para preservar o perfil anterior.
+
+A migration `V3__criar_historico_perfil.sql` cria a tabela e seu índice. Não há
+reconstrução de alterações anteriores à instalação da funcionalidade.
 
 ### Exemplo
 

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.newelog.auth.dto.AtualizarAtivoRequestDTO;
 import br.com.newelog.auth.dto.AtualizarPerfilRequestDTO;
 import br.com.newelog.auth.dto.CriarUsuarioRequestDTO;
+import br.com.newelog.auth.dto.HistoricoPerfilDTO;
 import br.com.newelog.auth.dto.UsuarioDTO;
 import br.com.newelog.auth.security.UsuarioAutenticado;
 import br.com.newelog.auth.service.UsuarioService;
@@ -39,6 +40,11 @@ public class UsuarioController {
             @RequestParam(name = "perfil", defaultValue = "") String perfil
     ) {
         return usuarioService.listar(busca, perfil);
+    }
+
+    @GetMapping("/{id}/historico-perfil")
+    public List<HistoricoPerfilDTO> listarHistoricoPerfil(@PathVariable Long id) {
+        return usuarioService.listarHistoricoPerfil(id);
     }
 
     @PostMapping
