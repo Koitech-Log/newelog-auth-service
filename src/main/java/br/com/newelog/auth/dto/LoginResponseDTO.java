@@ -8,6 +8,7 @@ public record LoginResponseDTO(
         String tipo,
         Instant expiraEm,
         String nome,
-        String perfil
+        String perfil,
+        boolean mustChangePassword
 ) {
 }

@@ -10,11 +10,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import br.com.newelog.auth.dto.AtualizarAtivoRequestDTO;
+import br.com.newelog.auth.dto.AtualizarPerfilRequestDTO;
 import br.com.newelog.auth.dto.CriarUsuarioRequestDTO;
+import br.com.newelog.auth.dto.HistoricoPerfilDTO;
 import br.com.newelog.auth.dto.UsuarioDTO;
 import br.com.newelog.auth.security.UsuarioAutenticado;
 import br.com.newelog.auth.service.UsuarioService;
@@ -32,8 +35,16 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public List<UsuarioDTO> listar() {
-        return usuarioService.listar();
+    public List<UsuarioDTO> listar(
+            @RequestParam(name = "busca", defaultValue = "") String busca,
+            @RequestParam(name = "perfil", defaultValue = "") String perfil
+    ) {
+        return usuarioService.listar(busca, perfil);
+    }
+
+    @GetMapping("/{id}/historico-perfil")
+    public List<HistoricoPerfilDTO> listarHistoricoPerfil(@PathVariable Long id) {
+        return usuarioService.listarHistoricoPerfil(id);
     }
 
     @PostMapping
@@ -49,5 +60,14 @@ public class UsuarioController {
             @AuthenticationPrincipal UsuarioAutenticado principal
     ) {
         return usuarioService.atualizarAtivo(id, dto.ativo(), principal.id());
+    }
+
+    @PatchMapping("/{id}/perfil")
+    public UsuarioDTO atualizarPerfil(
+            @PathVariable Long id,
+            @Valid @RequestBody AtualizarPerfilRequestDTO dto,
+            @AuthenticationPrincipal UsuarioAutenticado principal
+    ) {
+        return usuarioService.atualizarPerfil(id, dto.perfil(), principal.id());
     }
 }
